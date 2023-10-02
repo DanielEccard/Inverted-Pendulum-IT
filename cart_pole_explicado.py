@@ -22,7 +22,9 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-env = gym.make("CartPole-v1")
+from cartpole_env import CartPoleEnv
+
+env = CartPoleEnv(render_mode="human")
 
 # set up matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
