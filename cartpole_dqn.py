@@ -10,7 +10,7 @@ recompensa.
 
 """
 
-import gymnasium as gym
+import gym 
 import math
 import random 
 import matplotlib
@@ -22,10 +22,28 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from cartpole_env import CartPoleEnv
 
-env = CartPoleEnv(render_mode="human")
+class CustomCartPoleEnv(gym.Wrapper):
+    def __init__(self, env, pole_length=0.5, cart_mass=1.0, pole_mass=0.1):
+        super(CustomCartPoleEnv, self).__init__(env)
+        self.env = env
+        self.env.unwrapped.length = pole_length  # Modifica o comprimento do pêndulo
+        self.env.unwrapped.masscart = cart_mass  # Modifica a massa do carro
+        self.env.unwrapped.masspole = pole_mass  # Modifica a massa do pêndulo
 
+    def reset(self, **kwargs):
+        return self.env.reset(**kwargs)
+
+    def step(self, action):
+        return self.env.step(action)
+
+# Parâmetros customizados
+pole_length = 0.39  # comprimento do pêndulo
+cart_mass = 0.850   # massa do carro
+pole_mass = 0.085    # massa do pêndulo
+
+env = gym.make("CartPole-v1", render_mode=None)
+custom_env = CustomCartPoleEnv(env, pole_length=pole_length, cart_mass=cart_mass, pole_mass=pole_mass)
 # set up matplotlib
 is_ipython = 'inline' in matplotlib.get_backend()
 if is_ipython:
@@ -211,7 +229,7 @@ def optimize_model():
 if torch.cuda.is_available():
     num_episodes = 600
 else:
-    num_episodes = 200
+    num_episodes = 250
 
 for i_episode in range(num_episodes):
     # Reinicia o ambiente
@@ -249,7 +267,8 @@ for i_episode in range(num_episodes):
             episode_durations.append(t + 1)
             plot_durations()
             break
-
+torch.save(policy_net.state_dict(), 'policy_net.pth')
+torch.save(target_net.state_dict(), 'target_net.pth')
 print('Complete')
 plot_durations(show_result=True)
 plt.ioff()
