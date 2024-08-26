@@ -12,38 +12,74 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
+import gym
+import numpy as np
+
 class CustomCartPoleEnv(gym.Wrapper):
-    def __init__(self, env, pole_length=0.5, cart_mass=1.0, pole_mass=0.1):
+    def __init__(self, env, pole_length=0.5, cart_mass=1.0, pole_mass=0.1, force_magnitude=10.0):
         super(CustomCartPoleEnv, self).__init__(env)
         self.env = env
         self.env.unwrapped.length = pole_length  # Modify pole length
         self.env.unwrapped.masscart = cart_mass  # Modify cart mass
         self.env.unwrapped.masspole = pole_mass  # Modify pole mass
-        self.force_scale = 10
+        self.force_magnitude = force_magnitude
 
-        # Define action space with 3 discrete strengths for left and right
-        self.action_space = spaces.Discrete(6)  # 3 strengths for left and 3 for right
+        # Override action space to have 6 discrete actions
+        self.action_space = gym.spaces.Discrete(6)
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
 
     def step(self, action):
-        # Convert the discrete action to force values
-        if action < 3:
-            force = (action + 1) * self.force_scale / 3  # Scale to [1, 2, 3] strength for left
+        # Map the action to the corresponding force
+        if action == 0:
+            force = -0.25 * self.force_magnitude  # Left 25%
+        elif action == 1:
+            force = -0.5 * self.force_magnitude   # Left 50%
+        elif action == 2:
+            force = -1.0 * self.force_magnitude   # Left 100%
+        elif action == 3:
+            force = 0.25 * self.force_magnitude   # Right 25%
+        elif action == 4:
+            force = 0.5 * self.force_magnitude    # Right 50%
+        elif action == 5:
+            force = 1.0 * self.force_magnitude    # Right 100%
         else:
-            force = -(action - 2) * self.force_scale / 3  # Scale to [1, 2, 3] strength for right
+            raise ValueError("Invalid action. Action must be between 0 and 5.")
+
+        # Get current state
+        x, x_dot, theta, theta_dot = self.env.unwrapped.state
         
-        # Create an action to pass to the original environment
-        original_action = 0 if force < 0 else 1  # Action is either left (0) or right (1)
-        self.env.force_mag = abs(force)
-        # Perform the environment step
-        state, reward, done, info = self.env.step(original_action)
-        
-        # Optionally, you can include additional custom logic here
-        # For example, you might want to modify the reward or state based on force
-        
-        return state, reward, done, info
+        # Apply force to the environment using the same equations as in the original CartPole
+        costheta = np.cos(theta)
+        sintheta = np.sin(theta)
+        temp = (force + self.env.unwrapped.polemass_length * theta_dot ** 2 * sintheta) / self.env.unwrapped.total_mass
+        theta_acc = (self.env.unwrapped.gravity * sintheta - costheta * temp) / \
+                    (self.env.unwrapped.length * (4.0/3.0 - self.env.unwrapped.masspole * costheta ** 2 / self.env.unwrapped.total_mass))
+        x_acc = temp - self.env.unwrapped.polemass_length * theta_acc * costheta / self.env.unwrapped.total_mass
+
+        # Update the state
+        x = x + self.env.unwrapped.tau * x_dot
+        x_dot = x_dot + self.env.unwrapped.tau * x_acc
+        theta = theta + self.env.unwrapped.tau * theta_dot
+        theta_dot = theta_dot + self.env.unwrapped.tau * theta_acc
+
+        self.env.unwrapped.state = (x, x_dot, theta, theta_dot)
+
+        # Check if the episode is done
+        done = bool(
+            x < -self.env.unwrapped.x_threshold
+            or x > self.env.unwrapped.x_threshold
+            or theta < -self.env.unwrapped.theta_threshold_radians
+            or theta > self.env.unwrapped.theta_threshold_radians
+        )
+
+        # Reward is 1 for every step the pole is upright
+        reward = 1.0 if not done else 0.0
+
+        return np.array(self.env.unwrapped.state), reward, done, False, {}
+
+
 
 
 # Parâmetros customizados
@@ -130,9 +166,9 @@ TAU = 0.005 # taxa de update do target network
 LR = 1e-4 # learning rate do Adam
 
 # Número de ações
-n_actions = env.action_space.n
+n_actions = custom_env.action_space.n
 # Observações
-state, info = env.reset()
+state, info = custom_env.reset()
 n_observations = len(state)
 
 policy_net = DQN(n_observations, n_actions).to(device) # policy network
@@ -159,7 +195,7 @@ def select_action(state): # estado input, ação output. Toma ação com mais re
             # se eps < sample, ação com maior reward
             return policy_net(state).max(1)[1].view(1, 1)
     else:
-        return torch.tensor([[env.action_space.sample()]], device=device, dtype=torch.long) # se sample< eps ação aleatória
+        return torch.tensor([[custom_env.action_space.sample()]], device=device, dtype=torch.long) # se sample< eps ação aleatória
 
 
 episode_durations = []
@@ -238,15 +274,16 @@ def optimize_model():
 if torch.cuda.is_available():
     num_episodes = 600
 else:
-    num_episodes = 250
+    num_episodes = 600
 
 for i_episode in range(num_episodes):
     # Reinicia o ambiente
-    state, info = env.reset()
+    print(i_episode)
+    state, info = custom_env.reset()
     state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
     for t in count():
         action = select_action(state) # seleciona ação
-        observation, reward, terminated, truncated, _ = env.step(action.item()) # executa ação
+        observation, reward, terminated, truncated, _ = custom_env.step(action.item()) # executa ação
         reward = torch.tensor([reward], device=device)
         done = terminated or truncated
 
