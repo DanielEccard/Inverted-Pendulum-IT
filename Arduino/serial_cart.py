@@ -42,11 +42,9 @@ def load_model_and_predict(state, model_path=r'/home/ic/Downloads/policy_net.pth
 
 def update_pins(action):
     if action == 0:
-        # Ativa o pino 11 e desativa o pino 13
         GPIO.output(pin_11, GPIO.HIGH)
         print("Action = 1: Pino 11 ativado")
     elif action == 1:
-        # Desativa o pino 11 e ativa o pino 13
         GPIO.output(pin_11, GPIO.LOW)
         print("Action = 0: Pino 11 desativado")
     else:
