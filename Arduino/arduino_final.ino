@@ -51,7 +51,7 @@ void loop() {
     float voltage = sensorValue * (5.0 / 1023.0);
     float angle = mapFloat(voltage, 0.0, 3.3, 0.0, 2 * PI);
     unsigned long currentTime = millis();
-    float elapsedTime = (currentTime - previousTime) / 1000.0; // Convert milliseconds to seconds
+    float elapsedTime = (currentTime - previousTime) / 1000.0;
     float angularVelocity = (angle - previousAngle) / elapsedTime;
 
     Serial.print("Check ");
