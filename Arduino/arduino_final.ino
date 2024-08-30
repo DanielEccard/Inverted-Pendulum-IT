@@ -47,7 +47,7 @@ void loop() {
 
     // Atualiza a posição anterior do encoder
     encoderPosPrev = encoderPos;
-      int sensorValue = analogRead(analogPin);
+    int sensorValue = analogRead(analogPin);
     float voltage = sensorValue * (5.0 / 1023.0);
     float angle = mapFloat(voltage, 0.0, 3.3, 0.0, 2 * PI);
     unsigned long currentTime = millis();
