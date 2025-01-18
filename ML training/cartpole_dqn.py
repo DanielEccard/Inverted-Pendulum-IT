@@ -27,9 +27,9 @@ class CustomCartPoleEnv(gym.Wrapper):
     def __init__(self, env, pole_length=0.5, cart_mass=1.0, pole_mass=0.1):
         super(CustomCartPoleEnv, self).__init__(env)
         self.env = env
-        self.env.unwrapped.length = pole_length  # Modifica o comprimento do pêndulo
-        self.env.unwrapped.masscart = cart_mass  # Modifica a massa do carro
-        self.env.unwrapped.masspole = pole_mass  # Modifica a massa do pêndulo
+        self.env.unwrapped.length = pole_length  # Modifies the pendulum length
+        self.env.unwrapped.masscart = cart_mass  # Modifies the cart mass
+        self.env.unwrapped.masspole = pole_mass  # Modifies the pendulum mass
 
     def reset(self, **kwargs):
         return self.env.reset(**kwargs)
@@ -38,9 +38,9 @@ class CustomCartPoleEnv(gym.Wrapper):
         return self.env.step(action)
 
 # Parâmetros customizados
-pole_length = 0.39  # comprimento do pêndulo
-cart_mass = 0.850   # massa do carro
-pole_mass = 0.085    # massa do pêndulo
+pole_length = 0.39  # Pendulum length
+cart_mass = 0.850   # Cart mass
+pole_mass = 0.085    # Pendulum mass
 
 env = gym.make("CartPole-v1", render_mode=None)
 custom_env = CustomCartPoleEnv(env, pole_length=pole_length, cart_mass=cart_mass, pole_mass=pole_mass)
