@@ -37,7 +37,7 @@ class CustomCartPoleEnv(gym.Wrapper):
     def step(self, action):
         return self.env.step(action)
 
-# Parâmetros customizados
+# Custom parameters
 pole_length = 0.39  # Pendulum length
 cart_mass = 0.850   # Cart mass
 pole_mass = 0.085    # Pendulum mass
